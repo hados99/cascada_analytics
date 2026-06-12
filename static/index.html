@@ -126,13 +126,33 @@
                             </div>
                         </div>
 
-                        <!-- Active Users KPI -->
+                        <!-- Active Users (>15s) KPI -->
+                        <div class="kpi-card pink-gradient">
+                            <div class="kpi-icon"><i class="fa-solid fa-user-clock"></i></div>
+                            <div class="kpi-info">
+                                <h3>Active Users (>15s)</h3>
+                                <div class="kpi-value" id="kpi-users-active-15s">-</div>
+                                <div class="kpi-subtext" id="kpi-users-active-15s-ratio">비율: -%</div>
+                            </div>
+                        </div>
+
+                        <!-- Active Users (>3m) KPI -->
                         <div class="kpi-card emerald-gradient">
                             <div class="kpi-icon"><i class="fa-solid fa-user-check"></i></div>
                             <div class="kpi-info">
                                 <h3>Active Users (>3m)</h3>
                                 <div class="kpi-value" id="kpi-users-active-3m">-</div>
                                 <div class="kpi-subtext" id="kpi-users-active-3m-ratio">비율: -%</div>
+                            </div>
+                        </div>
+
+                        <!-- Active Users (>15m) KPI -->
+                        <div class="kpi-card indigo-gradient">
+                            <div class="kpi-icon"><i class="fa-solid fa-user-shield"></i></div>
+                            <div class="kpi-info">
+                                <h3>Active Users (>15m)</h3>
+                                <div class="kpi-value" id="kpi-users-active-15m">-</div>
+                                <div class="kpi-subtext" id="kpi-users-active-15m-ratio">비율: -%</div>
                             </div>
                         </div>
 
@@ -172,6 +192,12 @@
                         </div>
                         
                         <div class="avg-metrics-grid">
+                            <div class="avg-metric-box">
+                                <span class="avg-metric-title">인당 시청 시간 (15초 이상 시청)</span>
+                                <div class="avg-metric-value" id="avg-vt-15s">-</div>
+                                <span class="avg-metric-desc" id="avg-vt-15s-desc">15초 이상 활성 시청자당 시청시간 (Hours)</span>
+                            </div>
+
                             <div class="avg-metric-box">
                                 <span class="avg-metric-title">인당 시청 시간 (3분 이상 시청)</span>
                                 <div class="avg-metric-value" id="avg-vt-3m">-</div>
@@ -248,8 +274,10 @@
                                 <label>정렬 기준:</label>
                                 <select id="rankings-sort-selector" class="form-control">
                                     <option value="users">Total Users</option>
+                                    <option value="active_users_15s">Active Users (>15s)</option>
                                     <option value="active_users_3m">Active Users (>3m)</option>
                                     <option value="viewing_time">Total Viewing Time</option>
+                                    <option value="viewing_time_15s">Active Viewing Time (>15s)</option>
                                     <option value="viewing_time_3m">Active Viewing Time (>3m)</option>
                                     <option value="playbacks">Playback Count</option>
                                 </select>
@@ -264,11 +292,14 @@
                                         <th>Channel ID</th>
                                         <th>Channel Name</th>
                                         <th>Total Users</th>
+                                        <th>Active Users (>15s)</th>
                                         <th>Active Users (>3m)</th>
                                         <th>Total VT (Hrs)</th>
+                                        <th>Active VT (>15s) (Hrs)</th>
                                         <th>Active VT (>3m) (Hrs)</th>
                                         <th>Playbacks</th>
-                                        <th>Avg VT per Active (Hrs)</th>
+                                        <th>Avg VT per Active (>15s) (Hrs)</th>
+                                        <th>Avg VT per Active (>3m) (Hrs)</th>
                                     </tr>
                                 </thead>
                                 <tbody>

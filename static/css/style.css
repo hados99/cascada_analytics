@@ -21,6 +21,12 @@
     --accent-amber: #f59e0b;
     --accent-amber-glow: rgba(245, 158, 11, 0.15);
     
+    --accent-pink: #ec4899;
+    --accent-pink-glow: rgba(236, 72, 153, 0.15);
+    
+    --accent-indigo: #6366f1;
+    --accent-indigo-glow: rgba(99, 102, 241, 0.15);
+    
     --button-primary: #4f46e5;
     --button-primary-hover: #4338ca;
     
@@ -413,11 +419,23 @@ body {
 }
 .purple-gradient .kpi-icon { color: var(--accent-purple); }
 
+.pink-gradient {
+    background: linear-gradient(135deg, #2d0b1e 0%, #13030c 100%);
+    border-left: 4px solid var(--accent-pink);
+}
+.pink-gradient .kpi-icon { color: var(--accent-pink); }
+
 .emerald-gradient {
     background: linear-gradient(135deg, #092c22 0%, #03110d 100%);
     border-left: 4px solid var(--accent-emerald);
 }
 .emerald-gradient .kpi-icon { color: var(--accent-emerald); }
+
+.indigo-gradient {
+    background: linear-gradient(135deg, #140e34 0%, #060414 100%);
+    border-left: 4px solid var(--accent-indigo);
+}
+.indigo-gradient .kpi-icon { color: var(--accent-indigo); }
 
 .blue-gradient {
     background: linear-gradient(135deg, #0b1d3d 0%, #040c1c 100%);

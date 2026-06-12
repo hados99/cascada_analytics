@@ -35,12 +35,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // KPI Elements
     const kpiUsersTotal = document.getElementById("kpi-users-total");
+    const kpiUsersActive15s = document.getElementById("kpi-users-active-15s");
+    const kpiUsersActive15sRatio = document.getElementById("kpi-users-active-15s-ratio");
     const kpiUsersActive3m = document.getElementById("kpi-users-active-3m");
     const kpiUsersActive3mRatio = document.getElementById("kpi-users-active-3m-ratio");
+    const kpiUsersActive15m = document.getElementById("kpi-users-active-15m");
+    const kpiUsersActive15mRatio = document.getElementById("kpi-users-active-15m-ratio");
     const kpiVtTotal = document.getElementById("kpi-vt-total");
     const kpiPlaybacksTotal = document.getElementById("kpi-playbacks-total");
 
     // Average metrics Elements
+    const avgVt15s = document.getElementById("avg-vt-15s");
+    const avgVt15sDesc = document.getElementById("avg-vt-15s-desc");
     const avgVt3m = document.getElementById("avg-vt-3m");
     const avgVt3mDesc = document.getElementById("avg-vt-3m-desc");
     const avgVt15m = document.getElementById("avg-vt-15m");
@@ -140,6 +146,9 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (isTotalUserMode) {
             // Option 2: Efficiency (Viewing Hours per Total User)
+            avgVt15s.innerText = `${vt.per_user_total_15s.toFixed(2)} h`;
+            avgVt15sDesc.innerText = "전체 유입 사용자당 활성 시청시간 (>15초) (Hours)";
+
             avgVt3m.innerText = `${vt.per_user_total_3m.toFixed(2)} h`;
             avgVt3mDesc.innerText = "전체 유입 사용자당 활성 시청시간 (>3분) (Hours)";
             
@@ -147,6 +156,9 @@ document.addEventListener("DOMContentLoaded", () => {
             avgVt15mDesc.innerText = "전체 유입 사용자당 활성 시청시간 (>15분) (Hours)";
         } else {
             // Option 1: Engagement (Viewing Hours per Active User)
+            avgVt15s.innerText = `${vt.per_user_active_15s.toFixed(2)} h`;
+            avgVt15sDesc.innerText = "15초 이상 활성 시청자당 시청시간 (Hours)";
+
             avgVt3m.innerText = `${vt.per_user_active_3m.toFixed(2)} h`;
             avgVt3mDesc.innerText = "3분 이상 활성 시청자당 시청시간 (Hours)";
             
@@ -291,8 +303,12 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Format numbers
             kpiUsersTotal.innerText = data.users.total.toLocaleString();
+            kpiUsersActive15s.innerText = data.users.active_15s.toLocaleString();
+            kpiUsersActive15sRatio.innerText = `비율: ${data.users.active_15s_ratio}%`;
             kpiUsersActive3m.innerText = data.users.active_3m.toLocaleString();
             kpiUsersActive3mRatio.innerText = `비율: ${data.users.active_3m_ratio}%`;
+            kpiUsersActive15m.innerText = data.users.active_15m.toLocaleString();
+            kpiUsersActive15mRatio.innerText = `비율: ${data.users.active_15m_ratio}%`;
             kpiVtTotal.innerText = data.viewing_time.total.toLocaleString();
             kpiPlaybacksTotal.innerText = data.playback.total.toLocaleString();
             
@@ -381,9 +397,12 @@ document.addEventListener("DOMContentLoaded", () => {
         destroyChart(playbackRatioChart);
         
         const total = playbackData.total;
+        const active15s = playbackData.active_15s;
         const active3m = playbackData.active_3m;
         const active15m = playbackData.active_15m;
-        const shortBounce = total - active3m;
+        
+        const shortBounce = total - active15s;
+        const active15sTo3m = active15s - active3m;
         const active3to15m = active3m - active15m;
 
         const ctx = document.getElementById("playback-ratio-chart").getContext("2d");
@@ -391,11 +410,12 @@ document.addEventListener("DOMContentLoaded", () => {
         playbackRatioChart = new Chart(ctx, {
             type: "doughnut",
             data: {
-                labels: ["3분 이내 이탈 (Bounce)", "3분 ~ 15분 시청", "15분 이상 장기 시청"],
+                labels: ["15초 미만 초단기 이탈 (Bounce)", "15초 ~ 3분 시청", "3분 ~ 15분 시청", "15분 이상 장기 시청"],
                 datasets: [{
-                    data: [shortBounce, active3to15m, active15m],
+                    data: [shortBounce, active15sTo3m, active3to15m, active15m],
                     backgroundColor: [
                         "#ef4444", // Red/Bounce
+                        "#ec4899", // Pink
                         "#3b82f6", // Blue
                         "#10b981"  // Emerald
                     ],
@@ -455,6 +475,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 fill: true,
                 tension: 0.3
             }, {
+                label: "15초 이상 활성 사용자",
+                data: data.map(item => item.active_users_15s),
+                borderColor: "#ec4899",
+                backgroundColor: "rgba(236, 72, 153, 0.05)",
+                fill: true,
+                tension: 0.3
+            }, {
                 label: "3분 이상 활성 사용자",
                 data: data.map(item => item.active_users_3m),
                 borderColor: "#10b981",
@@ -478,6 +505,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 fill: true,
                 tension: 0.3
             }, {
+                label: "15초 이상 시청 시간 (Hrs)",
+                data: data.map(item => item.viewing_time_15s),
+                borderColor: "#ec4899",
+                backgroundColor: "rgba(236, 72, 153, 0.05)",
+                fill: true,
+                tension: 0.3
+            }, {
                 label: "3분 이상 시청 시간 (Hrs)",
                 data: data.map(item => item.viewing_time_3m),
                 borderColor: "#10b981",
@@ -494,10 +528,31 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         } else if (selectedMetric === "playbacks") {
             datasets.push({
-                label: "총 재생 횟수 (Playbacks)",
+                label: "총 재생 횟수 (Total Playbacks)",
                 data: data.map(item => item.playbacks),
-                borderColor: "#f59e0b",
-                backgroundColor: "rgba(245, 158, 11, 0.05)",
+                borderColor: "#8b5cf6",
+                backgroundColor: "rgba(139, 92, 246, 0.05)",
+                fill: true,
+                tension: 0.3
+            }, {
+                label: "15초 이상 재생 횟수",
+                data: data.map(item => item.playbacks_15s),
+                borderColor: "#ec4899",
+                backgroundColor: "rgba(236, 72, 153, 0.05)",
+                fill: true,
+                tension: 0.3
+            }, {
+                label: "3분 이상 재생 횟수",
+                data: data.map(item => item.playbacks_3m),
+                borderColor: "#10b981",
+                backgroundColor: "rgba(16, 185, 129, 0.05)",
+                fill: true,
+                tension: 0.3
+            }, {
+                label: "15분 이상 재생 횟수",
+                data: data.map(item => item.playbacks_15m),
+                borderColor: "#3b82f6",
+                backgroundColor: "rgba(59, 130, 246, 0.05)",
                 fill: true,
                 tension: 0.3
             });
@@ -560,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
         rankingsTableBody.innerHTML = "";
         
         if (data.length === 0) {
-            rankingsTableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">데이터가 없습니다. 필터를 조정해 보세요.</td></tr>`;
+            rankingsTableBody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--text-muted);">데이터가 없습니다. 필터를 조정해 보세요.</td></tr>`;
             return;
         }
 
@@ -571,10 +626,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td style="font-family: monospace; font-size: 13px;">${row.channel_id}</td>
                 <td style="font-weight: 500;">${row.channel_name}</td>
                 <td>${row.users.toLocaleString()}</td>
+                <td>${row.active_users_15s.toLocaleString()}</td>
                 <td>${row.active_users_3m.toLocaleString()}</td>
                 <td>${row.viewing_time.toLocaleString()}</td>
+                <td>${row.viewing_time_15s.toLocaleString()}</td>
                 <td>${row.viewing_time_3m.toLocaleString()}</td>
                 <td>${row.playbacks.toLocaleString()}</td>
+                <td>${row.per_user_active_15s.toFixed(2)} h</td>
                 <td>${row.per_user_active_3m.toFixed(2)} h</td>
             `;
             rankingsTableBody.appendChild(tr);

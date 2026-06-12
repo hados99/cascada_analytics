@@ -114,14 +114,17 @@ def get_overview(
         query = f"""
         SELECT 
             SUM(users)::BIGINT as total_users,
+            SUM(active_users_playback_15)::BIGINT as active_users_15s,
             SUM(active_users_playback_180)::BIGINT as active_users_3m,
             SUM(active_users_playback_900)::BIGINT as active_users_15m,
             
             SUM(viewing_time)::BIGINT as viewing_time_total,
+            SUM(active_viewing_time_15)::BIGINT as viewing_time_15s,
             SUM(active_viewing_time_180)::BIGINT as viewing_time_3m,
             SUM(active_viewing_time_900)::BIGINT as viewing_time_15m,
             
             SUM(playback_counts)::BIGINT as playback_counts,
+            SUM(active_playback_counts_15)::BIGINT as active_playbacks_15s,
             SUM(active_playback_counts_180)::BIGINT as active_playbacks_3m,
             SUM(active_playback_counts_900)::BIGINT as active_playbacks_15m
         FROM cascada_metrics
@@ -133,54 +136,64 @@ def get_overview(
         
         if not res or res[0] is None:
             return {
-                "users": {"total": 0, "active_3m": 0, "active_15m": 0},
-                "viewing_time": {"total": 0, "active_3m": 0, "active_15m": 0, "per_user_total": 0, "per_user_active_3m": 0, "per_user_total_3m": 0, "per_user_active_15m": 0, "per_user_total_15m": 0},
-                "playback": {"total": 0, "active_3m": 0, "active_15m": 0, "playback_per_user": 0}
+                "users": {"total": 0, "active_15s": 0, "active_3m": 0, "active_15m": 0},
+                "viewing_time": {"total": 0, "active_15s": 0, "active_3m": 0, "active_15m": 0, "per_user_total": 0, "per_user_active_15s": 0, "per_user_active_3m": 0, "per_user_active_15m": 0, "per_user_total_15s": 0, "per_user_total_3m": 0, "per_user_total_15m": 0},
+                "playback": {"total": 0, "active_15s": 0, "active_3m": 0, "active_15m": 0, "playback_per_user": 0}
             }
             
         (
-            users, active_3m, active_15m,
-            vt_total, vt_3m, vt_15m,
-            pb_total, pb_3m, pb_15m
+            users, active_15s, active_3m, active_15m,
+            vt_total, vt_15s, vt_3m, vt_15m,
+            pb_total, pb_15s, pb_3m, pb_15m
         ) = res
         
         # Calculate rates and averages safely
         users = users or 0
+        active_15s = active_15s or 0
         active_3m = active_3m or 0
         active_15m = active_15m or 0
         vt_total = vt_total or 0
+        vt_15s = vt_15s or 0
         vt_3m = vt_3m or 0
         vt_15m = vt_15m or 0
         pb_total = pb_total or 0
+        pb_15s = pb_15s or 0
         pb_3m = pb_3m or 0
         pb_15m = pb_15m or 0
         
         return {
             "users": {
                 "total": users,
+                "active_15s": active_15s,
                 "active_3m": active_3m,
                 "active_15m": active_15m,
+                "active_15s_ratio": round((active_15s / users * 100), 2) if users > 0 else 0,
                 "active_3m_ratio": round((active_3m / users * 100), 2) if users > 0 else 0,
                 "active_15m_ratio": round((active_15m / users * 100), 2) if users > 0 else 0
             },
             "viewing_time": {
                 "total": vt_total,
+                "active_15s": vt_15s,
                 "active_3m": vt_3m,
                 "active_15m": vt_15m,
                 # Per User Metrics (Total Hours per User)
                 "per_user_total": round((vt_total / users), 2) if users > 0 else 0,
                 # Option 1: Engagement (Viewing hours per Active User)
+                "per_user_active_15s": round((vt_15s / active_15s), 2) if active_15s > 0 else 0,
                 "per_user_active_3m": round((vt_3m / active_3m), 2) if active_3m > 0 else 0,
                 "per_user_active_15m": round((vt_15m / active_15m), 2) if active_15m > 0 else 0,
                 # Option 2: Efficiency (Viewing hours per Total User)
+                "per_user_total_15s": round((vt_15s / users), 2) if users > 0 else 0,
                 "per_user_total_3m": round((vt_3m / users), 2) if users > 0 else 0,
                 "per_user_total_15m": round((vt_15m / users), 2) if users > 0 else 0
             },
             "playback": {
                 "total": pb_total,
+                "active_15s": pb_15s,
                 "active_3m": pb_3m,
                 "active_15m": pb_15m,
                 "playback_per_user": round((pb_total / users), 2) if users > 0 else 0,
+                "active_15s_ratio": round((pb_15s / pb_total * 100), 2) if pb_total > 0 else 0,
                 "active_3m_ratio": round((pb_3m / pb_total * 100), 2) if pb_total > 0 else 0,
                 "active_15m_ratio": round((pb_15m / pb_total * 100), 2) if pb_total > 0 else 0
             }
@@ -206,12 +219,17 @@ def get_trends(
         SELECT 
             target_time,
             SUM(users)::INTEGER as users,
+            SUM(active_users_playback_15)::INTEGER as active_users_15s,
             SUM(active_users_playback_180)::INTEGER as active_users_3m,
             SUM(active_users_playback_900)::INTEGER as active_users_15m,
             SUM(viewing_time)::INTEGER as viewing_time,
+            SUM(active_viewing_time_15)::INTEGER as viewing_time_15s,
             SUM(active_viewing_time_180)::INTEGER as viewing_time_3m,
             SUM(active_viewing_time_900)::INTEGER as viewing_time_15m,
-            SUM(playback_counts)::INTEGER as playbacks
+            SUM(playback_counts)::INTEGER as playbacks,
+            SUM(active_playback_counts_15)::INTEGER as playbacks_15s,
+            SUM(active_playback_counts_180)::INTEGER as playbacks_3m,
+            SUM(active_playback_counts_900)::INTEGER as playbacks_15m
         FROM cascada_metrics
         WHERE {where_clause}
         GROUP BY target_time
@@ -226,12 +244,17 @@ def get_trends(
             trends.append({
                 "date": row[0].isoformat() if row[0] else None,
                 "users": row[1] or 0,
-                "active_users_3m": row[2] or 0,
-                "active_users_15m": row[3] or 0,
-                "viewing_time": row[4] or 0,
-                "viewing_time_3m": row[5] or 0,
-                "viewing_time_15m": row[6] or 0,
-                "playbacks": row[7] or 0
+                "active_users_15s": row[2] or 0,
+                "active_users_3m": row[3] or 0,
+                "active_users_15m": row[4] or 0,
+                "viewing_time": row[5] or 0,
+                "viewing_time_15s": row[6] or 0,
+                "viewing_time_3m": row[7] or 0,
+                "viewing_time_15m": row[8] or 0,
+                "playbacks": row[9] or 0,
+                "playbacks_15s": row[10] or 0,
+                "playbacks_3m": row[11] or 0,
+                "playbacks_15m": row[12] or 0
             })
         return trends
     except Exception as e:
@@ -250,8 +273,10 @@ def get_channel_rankings(
     """Returns ranked channels based on a metric."""
     valid_sort_columns = {
         "users": "SUM(users)",
+        "active_users_15s": "SUM(active_users_playback_15)",
         "active_users_3m": "SUM(active_users_playback_180)",
         "viewing_time": "SUM(viewing_time)",
+        "viewing_time_15s": "SUM(active_viewing_time_15)",
         "viewing_time_3m": "SUM(active_viewing_time_180)",
         "playbacks": "SUM(playback_counts)"
     }
@@ -270,8 +295,10 @@ def get_channel_rankings(
             channel_id,
             channel_name,
             SUM(users)::INTEGER as users,
+            SUM(active_users_playback_15)::INTEGER as active_users_15s,
             SUM(active_users_playback_180)::INTEGER as active_users_3m,
             SUM(viewing_time)::INTEGER as viewing_time,
+            SUM(active_viewing_time_15)::INTEGER as viewing_time_15s,
             SUM(active_viewing_time_180)::INTEGER as viewing_time_3m,
             SUM(playback_counts)::INTEGER as playbacks
         FROM cascada_metrics
@@ -288,20 +315,25 @@ def get_channel_rankings(
         rankings = []
         for i, row in enumerate(res):
             users_val = row[2] or 0
-            active_users_3m_val = row[3] or 0
-            viewing_time_val = row[4] or 0
-            viewing_time_3m_val = row[5] or 0
+            active_users_15s_val = row[3] or 0
+            active_users_3m_val = row[4] or 0
+            viewing_time_val = row[5] or 0
+            viewing_time_15s_val = row[6] or 0
+            viewing_time_3m_val = row[7] or 0
             
             rankings.append({
                 "rank": i + 1,
                 "channel_id": row[0],
                 "channel_name": row[1],
                 "users": users_val,
+                "active_users_15s": active_users_15s_val,
                 "active_users_3m": active_users_3m_val,
                 "viewing_time": viewing_time_val,
+                "viewing_time_15s": viewing_time_15s_val,
                 "viewing_time_3m": viewing_time_3m_val,
-                "playbacks": row[6] or 0,
+                "playbacks": row[8] or 0,
                 # Custom aggregations
+                "per_user_active_15s": round((viewing_time_15s_val / active_users_15s_val), 2) if active_users_15s_val > 0 else 0,
                 "per_user_active_3m": round((viewing_time_3m_val / active_users_3m_val), 2) if active_users_3m_val > 0 else 0
             })
         return rankings
