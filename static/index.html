@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CASCADA CP Analytics Dashboard</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon"><i class="fa-solid fa-chart-line"></i></span>
+                    <span class="logo-text">CASCADA</span>
+                </div>
+                <div class="logo-sub">Samsung TV+ CP Analytics</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#overview-section" class="nav-item active" id="nav-overview">
+                    <i class="fa-solid fa-house"></i> Overview
+                </a>
+                <a href="#trends-section" class="nav-item" id="nav-trends">
+                    <i class="fa-solid fa-chart-area"></i> Trends
+                </a>
+                <a href="#channels-section" class="nav-item" id="nav-channels">
+                    <i class="fa-solid fa-tv"></i> Channel Rankings
+                </a>
+                <a href="#sql-section" class="nav-item" id="nav-sql">
+                    <i class="fa-solid fa-database"></i> SQL Console
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="db-status">
+                    <span class="status-indicator online"></span>
+                    <span>DuckDB Connected</span>
+                </div>
+                <div class="db-info">cascada_analytics.db</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header with Filters -->
+            <header class="main-header">
+                <div class="header-title-wrapper">
+                    <h1>CP Statistics Dashboard</h1>
+                    <p class="subtitle" id="data-period-label">Loading data period...</p>
+                </div>
+                
+                <div class="filters-toggle-btn" id="toggle-filters-btn">
+                    <i class="fa-solid fa-sliders"></i> Filters
+                </div>
+            </header>
+
+            <!-- Filter Panel -->
+            <section class="filter-panel card hide" id="filter-panel">
+                <div class="filter-grid">
+                    <!-- Date Range Filter -->
+                    <div class="filter-group">
+                        <label><i class="fa-solid fa-calendar"></i> 기간 설정</label>
+                        <div class="date-inputs">
+                            <input type="date" id="filter-start-date">
+                            <span>to</span>
+                            <input type="date" id="filter-end-date">
+                        </div>
+                    </div>
+                    
+                    <!-- Platform Filter -->
+                    <div class="filter-group">
+                        <label><i class="fa-solid fa-laptop"></i> 플랫폼</label>
+                        <select id="filter-platform" multiple class="custom-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <small>Ctrl키를 누른 채 클릭하여 다중 선택 가능</small>
+                    </div>
+                    
+                    <!-- Genre Filter -->
+                    <div class="filter-group">
+                        <label><i class="fa-solid fa-clapperboard"></i> 장르</label>
+                        <select id="filter-genre" multiple class="custom-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <!-- Provider Filter -->
+                    <div class="filter-group">
+                        <label><i class="fa-solid fa-handshake"></i> 프로바이더</label>
+                        <select id="filter-provider" multiple class="custom-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="filter-actions">
+                    <button class="btn btn-secondary" id="btn-reset-filters">초기화</button>
+                    <button class="btn btn-primary" id="btn-apply-filters">적용</button>
+                </div>
+            </section>
+
+            <!-- Main Sections -->
+            <div class="content-body">
+                <!-- 1. OVERVIEW SECTION -->
+                <section id="overview-section" class="tab-content active">
+                    <!-- KPI Cards Grid -->
+                    <div class="kpi-grid">
+                        <!-- Total Users KPI -->
+                        <div class="kpi-card purple-gradient">
+                            <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+                            <div class="kpi-info">
+                                <h3>Total Users</h3>
+                                <div class="kpi-value" id="kpi-users-total">-</div>
+                                <div class="kpi-subtext">누적 시청 유저 수</div>
+                            </div>
+                        </div>
+
+                        <!-- Active Users KPI -->
+                        <div class="kpi-card emerald-gradient">
+                            <div class="kpi-icon"><i class="fa-solid fa-user-check"></i></div>
+                            <div class="kpi-info">
+                                <h3>Active Users (>3m)</h3>
+                                <div class="kpi-value" id="kpi-users-active-3m">-</div>
+                                <div class="kpi-subtext" id="kpi-users-active-3m-ratio">비율: -%</div>
+                            </div>
+                        </div>
+
+                        <!-- Viewing Time KPI -->
+                        <div class="kpi-card blue-gradient">
+                            <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+                            <div class="kpi-info">
+                                <h3>Total Viewing Time</h3>
+                                <div class="kpi-value" id="kpi-vt-total">-</div>
+                                <div class="kpi-subtext">총 시청 시간 (Hour)</div>
+                            </div>
+                        </div>
+
+                        <!-- Playbacks KPI -->
+                        <div class="kpi-card amber-gradient">
+                            <div class="kpi-icon"><i class="fa-solid fa-play"></i></div>
+                            <div class="kpi-info">
+                                <h3>Playback Counts</h3>
+                                <div class="kpi-value" id="kpi-playbacks-total">-</div>
+                                <div class="kpi-subtext">총 재생 횟수</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metric Toggle and Detailed Metrics -->
+                    <div class="section-card card">
+                        <div class="card-header">
+                            <h2>인당 평균 시청 시간 (Avg Viewing Time Per User)</h2>
+                            <div class="toggle-container">
+                                <span class="toggle-label active" id="lbl-toggle-active">활성 사용자 기준 (Engagement)</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="metric-toggle-switch">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span class="toggle-label" id="lbl-toggle-total">전체 사용자 기준 (Efficiency)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="avg-metrics-grid">
+                            <div class="avg-metric-box">
+                                <span class="avg-metric-title">인당 시청 시간 (3분 이상 시청)</span>
+                                <div class="avg-metric-value" id="avg-vt-3m">-</div>
+                                <span class="avg-metric-desc" id="avg-vt-3m-desc">3분 이상 활성 시청자당 시청시간 (Hours)</span>
+                            </div>
+                            
+                            <div class="avg-metric-box">
+                                <span class="avg-metric-title">인당 시청 시간 (15분 이상 시청)</span>
+                                <div class="avg-metric-value" id="avg-vt-15m">-</div>
+                                <span class="avg-metric-desc" id="avg-vt-15m-desc">15분 이상 활성 시청자당 시청시간 (Hours)</span>
+                            </div>
+
+                            <div class="avg-metric-box">
+                                <span class="avg-metric-title">인당 총 시청 시간</span>
+                                <div class="avg-metric-value" id="avg-vt-total">-</div>
+                                <span class="avg-metric-desc">전체 유입 사용자당 총 시청시간 (Hours)</span>
+                            </div>
+
+                            <div class="avg-metric-box">
+                                <span class="avg-metric-title">인당 평균 재생 횟수</span>
+                                <div class="avg-metric-value" id="avg-pb-per-user">-</div>
+                                <span class="avg-metric-desc">전체 사용자당 재생 횟수</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Platform Breakdown & Charts -->
+                    <div class="grid-2-col">
+                        <div class="card chart-container">
+                            <div class="card-header">
+                                <h2>플랫폼별 유저 점유율 (Platform Share)</h2>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="platform-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-container">
+                            <div class="card-header">
+                                <h2>활성 재생 필터 비율 (Active Playbacks)</h2>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="playback-ratio-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. TRENDS SECTION -->
+                <section id="trends-section" class="tab-content">
+                    <div class="card chart-container large-chart">
+                        <div class="card-header">
+                            <h2>일별 시청 지표 추이 (Daily Metric Trends)</h2>
+                            <div class="chart-controls">
+                                <select id="trend-metric-selector" class="form-control">
+                                    <option value="users">Total & Active Users</option>
+                                    <option value="viewing_time">Viewing Time (Total / 3m / 15m)</option>
+                                    <option value="playbacks">Playbacks</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="trend-line-chart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. CHANNEL RANKINGS SECTION -->
+                <section id="channels-section" class="tab-content">
+                    <div class="card">
+                        <div class="card-header flex-header">
+                            <h2>채널별 주요 통계 순위 (Channel Performance Rankings)</h2>
+                            <div class="rankings-controls">
+                                <label>정렬 기준:</label>
+                                <select id="rankings-sort-selector" class="form-control">
+                                    <option value="users">Total Users</option>
+                                    <option value="active_users_3m">Active Users (>3m)</option>
+                                    <option value="viewing_time">Total Viewing Time</option>
+                                    <option value="viewing_time_3m">Active Viewing Time (>3m)</option>
+                                    <option value="playbacks">Playback Count</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="table-wrapper">
+                            <table class="data-table" id="rankings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Channel ID</th>
+                                        <th>Channel Name</th>
+                                        <th>Total Users</th>
+                                        <th>Active Users (>3m)</th>
+                                        <th>Total VT (Hrs)</th>
+                                        <th>Active VT (>3m) (Hrs)</th>
+                                        <th>Playbacks</th>
+                                        <th>Avg VT per Active (Hrs)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. SQL CONSOLE SECTION -->
+                <section id="sql-section" class="tab-content">
+                    <div class="card sql-console">
+                        <div class="card-header">
+                            <h2>DuckDB SQL 쿼리 콘솔 (Read-Only)</h2>
+                            <span class="badge">TABLE: cascada_metrics</span>
+                        </div>
+                        
+                        <div class="sql-input-area">
+                            <textarea id="sql-query-input" placeholder="SELECT * FROM cascada_metrics LIMIT 10;"></textarea>
+                        </div>
+                        
+                        <div class="sql-actions">
+                            <div class="sql-templates">
+                                <button class="btn btn-secondary sql-tmpl-btn" data-sql="SELECT platform, SUM(users) as total_users FROM cascada_metrics GROUP BY platform ORDER BY total_users DESC;">플랫폼별 유저수</button>
+                                <button class="btn btn-secondary sql-tmpl-btn" data-sql="SELECT channel_name, SUM(viewing_time) as total_hours FROM cascada_metrics GROUP BY channel_name ORDER BY total_hours DESC LIMIT 5;">상위 5개 채널 (시청시간)</button>
+                                <button class="btn btn-secondary sql-tmpl-btn" data-sql="SELECT target_time, SUM(users) as daily_users FROM cascada_metrics GROUP BY target_time ORDER BY target_time;">일별 유저수 추이</button>
+                            </div>
+                            <button class="btn btn-primary" id="btn-run-sql"><i class="fa-solid fa-play"></i> Run Query</button>
+                        </div>
+
+                        <div class="sql-results-area" id="sql-results-area">
+                            <p class="results-placeholder">쿼리를 입력하고 실행 버튼을 클릭하면 결과가 여기에 표시됩니다.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+    <!-- Custom App JS -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
